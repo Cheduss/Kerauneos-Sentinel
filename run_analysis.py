@@ -35,13 +35,26 @@ def main():
         default="none"
     )
 
+        #NUEVO: Recorte de la region del radar
+    parser.add_argument(
+        "--roi",
+        nargs=4,
+        type=int,
+        metavar=("X1", "Y1", "X2", "Y2"),
+        default=None,
+        help="Coordenadas para recortar la region del radar"
+    )
+
     args = parser.parse_args()
 
+    
     analysis = analyze_radar(
         image_path=args.image,
         min_area=args.min_area,
-        filter_type=args.filter
+        filter_type=args.filter,
+        roi=tuple(args.roi) if args.roi is not None else None
     )
+
 
     # Crear carpeta de resultados
     output_dir = Path("outputs")
