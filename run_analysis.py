@@ -62,6 +62,21 @@ def main():
 
 
 
+    parser.add_argument(
+        "--morphology",
+        choices=[
+            "none",
+            "opening",
+            "closing",
+            "erosion",
+            "dilation"
+        ],
+        default="opening",
+        help="Operacion morfologica para limpiar la mascara"
+    )
+
+
+
     args = parser.parse_args()
 
 
@@ -71,7 +86,8 @@ def main():
         filter_type=args.filter,
         roi=tuple(args.roi) if args.roi is not None else None,
         segmentation_mode=args.segmentation,
-        threshold_dbz=args.dbz
+        threshold_dbz=args.dbz,
+        morphology_operation=args.morphology, #morfologia
     )
 
 
