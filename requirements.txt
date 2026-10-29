@@ -1,0 +1,8 @@
+
+numpy #matrices de pixeles
+opencv-python #carga de imagenesb
+Pillow #segmentacion de imagenes, filtros, deteccion de nucleos, etc.
+pytest #comprobacion de funciones (ver si andan)
+fastapi #conectar con el frontend
+uvicorn #ejecutar el servidor
+python-multipart #recibir las imagenes del usuario
