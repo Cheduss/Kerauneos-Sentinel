@@ -45,14 +45,33 @@ def main():
         help="Coordenadas para recortar la region del radar"
     )
 
+    
+    parser.add_argument(
+        "--segmentation",
+        choices=["hsv", "dbz"],
+        default="hsv",
+        help="Metodo de segmentacion"
+    )
+
+    parser.add_argument(
+        "--dbz",
+        type=float,
+        default=40,
+        help="Umbral minimo estimado de reflectividad"
+    )
+
+
+
     args = parser.parse_args()
 
-    
+
     analysis = analyze_radar(
         image_path=args.image,
         min_area=args.min_area,
         filter_type=args.filter,
-        roi=tuple(args.roi) if args.roi is not None else None
+        roi=tuple(args.roi) if args.roi is not None else None,
+        segmentation_mode=args.segmentation,
+        threshold_dbz=args.dbz
     )
 
 

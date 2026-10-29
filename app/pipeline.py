@@ -8,7 +8,10 @@ from app.segmentation import segment_by_color
 from app.morphology import apply_morphology
 from app.detection import detect_storm_cells
 from app.visualization import draw_storm_cells
+from app.reflectivity import segment_by_dbz
 
+
+#se mantienen ambas funciones de segmentacion
 
 def analyze_radar(
     image_path: str | Path,
@@ -17,18 +20,15 @@ def analyze_radar(
     morphology_operation: str = "opening",
     min_area: int = 100,
     roi: tuple[int, int, int, int] | None = None,
+    segmentation_mode: str = "hsv",
+    threshold_dbz: float = 40,
 ) -> dict:
-    """
-    Procesa una imagen de radar y detecta regiones.
 
-    roi: coordenadas (x1, y1, x2, y2)
-         para recortar la imagen.
-    """
+    # 1. Cargar imagen completa
+    full_image = load_image(image_path)
+    image = full_image.copy()
 
-    # 1. Cargar imagen
-    image = load_image(image_path)
-
-    # 2. Recortar region de interes si se solicita
+    # 2. Recortar region principal
     if roi is not None:
         if len(roi) != 4:
             raise ValueError(
@@ -37,33 +37,48 @@ def analyze_radar(
 
         image = crop_radar(image, *roi)
 
-    # 3. Aplicar filtro espacial
+    # 3. Preprocesamiento
     filtered = apply_filter(
         image,
         filter_type=filter_type,
         kernel_size=3
     )
 
-    # 4. Segmentar por colores
-    mask = segment_by_color(
-        filtered,
-        colors=colors
-    )
+    # 4. Seleccionar metodo de segmentacion
+    if segmentation_mode == "hsv":
 
-    # 5. Aplicar operaciones morfologicas
+        mask = segment_by_color(
+            filtered,
+            colors=colors
+        )
+
+    elif segmentation_mode == "dbz":
+
+        mask = segment_by_dbz(
+            filtered,
+            full_image,
+            threshold_dbz=threshold_dbz
+        )
+
+    else:
+        raise ValueError(
+            f"Modo de segmentacion desconocido: {segmentation_mode}"
+        )
+
+    # 5. Operaciones morfologicas
     clean_mask = apply_morphology(
         mask,
         operation=morphology_operation,
         kernel_size=3
     )
 
-    # 6. Detectar regiones
+    # 6. Detectar nucleos
     cells = detect_storm_cells(
         clean_mask,
         min_area=min_area
     )
 
-    # 7. Dibujar regiones detectadas
+    # 7. Dibujar resultados
     result = draw_storm_cells(
         image,
         clean_mask,
@@ -77,3 +92,4 @@ def analyze_radar(
         "cells": cells,
         "total_cells": len(cells)
     }
+
