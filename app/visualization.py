@@ -51,10 +51,10 @@ def draw_storm_cells(
     ):
         raise ValueError("Mascara binaria no valida.")
 
-    # Copiar imagen para no modificar la original
+    #imagen para no modificar la original
     result = image.copy()
 
-    # Obtener las etiquetas de las regiones conectadas
+    #Obtener las etiquetas de las regiones conectadas
     num_labels, labels, stats, _ = (
         cv2.connectedComponentsWithStats(
             mask, connectivity=8
@@ -107,20 +107,20 @@ def draw_storm_cells(
             result,
             (x - 3, y - 3),
             (x + w + 2, y + h + 2),
-            (0, 255, 0),
+            (255, 0, 0),   # azul en BGR
             1
         )
 
-        # Dibujar contorno amarillo
+        #Dibujar contorno amarillo
         cv2.drawContours(
             result,
             contours,
             -1,
-            (0, 255, 255),
+            (255, 255, 0),   # cian
             2
         )
 
-        # Marcar centroide con un punto rojo
+        #Marcar centroide con un punto rojo
         cv2.circle(
             result,
             (cx, cy),
@@ -129,11 +129,32 @@ def draw_storm_cells(
             -1
         )
 
-        # Dibujar numero identificador
+        #Dibujar numero identificador
+        label = f"Nucleo {cell['id']}"
+        text_x = x
+        text_y = max(y - 9, 12)
+
+        (text_width, text_height), baseline = cv2.getTextSize(
+            label,
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.45,
+            1
+        )
+
+        # Fondo negro para el texto
+        cv2.rectangle(
+            result,
+            (text_x - 2, text_y - text_height - 2),
+            (text_x + text_width + 2, text_y + baseline + 2),
+            (0, 0, 0),
+            -1
+        )
+
+        # Texto blanco
         cv2.putText(
             result,
-            f"Nucleo {cell['id']}",
-            (x, max(y - 9, 12)),
+            label,
+            (text_x, text_y),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.45,
             (255, 255, 255),
