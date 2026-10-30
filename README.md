@@ -1,20 +1,29 @@
 
 # Kerauneos-Sentinel
 
-Storm detection and analysis using digital image processing.
-
 Detector de convección usando procesamiento digital de imagenes.
 
-## Description
+Storm detection and analysis using digital image processing.
+
+
+## Descripción / Description
+
+Kerauneos-Sentinel es una aplicacion en python hecha para identificar y analñizar
+regiones de precipitación intensa en imágenes de radar meteorologico.
 
 Kerauneos-Sentinel is a Python application designed to
 identify and analyze intense precipitation regions in
 meteorological radar images.
 
-Kerauneos-Sentinel es una aplicacion en python hecha para identificar y analñizar
-regiones de precipitación intensa en imágenes de radar meteorologico.
+## Características / Features
 
-## Features
+- Carga de imágenes de radar
+- Preprocesamiento de imágenes y filtros espaciales
+- Segmentación basada en reflectividad
+- Operaciones morfológicas
+- Detección de células de tormenta
+- Cálculo de área y centroide
+- Visualización de las regiones detectadas
 
 - Radar image loading
 - Image preprocessing and spatial filters
@@ -24,7 +33,7 @@ regiones de precipitación intensa en imágenes de radar meteorologico.
 - Area and centroid calculations
 - Visualization of detected regions
 
-## Technologies
+## Technologies / Tecnologías
 
 - Python
 - NumPy
@@ -33,8 +42,8 @@ regiones de precipitación intensa en imágenes de radar meteorologico.
 - FastAPI
 - Pytest
 
-## Project status
+## Estado del Proyecto
 
-Under development.
+Bajo desarrollo
 
-Final project - Digital Image Processing.
+Proyecto final - Procesamiento digital de imágenes.
