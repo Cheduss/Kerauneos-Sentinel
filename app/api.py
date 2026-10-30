@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 
+
 import numpy as np
 
 from app.crop_region import crop_radar
@@ -16,6 +17,7 @@ import cv2
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from app.pipeline import analyze_radar
+from app.storm_tracking import estimate_storm_motion
 
 
 """
@@ -236,14 +238,19 @@ async def read_uploaded_radar(file: UploadFile):
     return image
 
 
+
 @app.post("/api/track")
 async def track_storms(
     image1: UploadFile = File(...),
     image2: UploadFile = File(...),
     max_corners: int = Form(200, ge=1, le=1000),
     max_vectors: int = Form(60, ge=1, le=200),
-    roi: str | None = Form(None)
+    roi: str | None = Form(None),
+    tracking_mode: Literal[
+        "general", "precipitation"
+    ] = Form("general")
 ):
+
     """
     Estima el movimiento aparente entre dos imagenes
     mediante flujo optico Lucas-Kanade.
@@ -276,11 +283,20 @@ async def track_storms(
 
         # 4. Calcular flujo optico
         try:
-            motion = estimate_motion(
-                first,
-                second,
-                max_corners=max_corners
-            )
+
+            if tracking_mode == "general":
+                motion = estimate_motion(
+                    first,
+                    second,
+                    max_corners=max_corners
+                )
+
+            else:
+                motion = estimate_storm_motion(
+                    first,
+                    second,
+                    max_corners=max_corners
+                )
 
             # 5. Dibujar vectores sobre segunda imagen
             result = draw_motion_vectors(
@@ -296,7 +312,10 @@ async def track_storms(
             ) from error
 
         # 6. Devolver resultados al frontend
+
         return {
+            "tracking_mode": tracking_mode,
+            "candidate_points": motion.get("candidate_points"),
             "tracked_points": motion["tracked_points"],
             "dx_pixels": motion["dx_pixels"],
             "dy_pixels": motion["dy_pixels"],
