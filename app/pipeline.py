@@ -9,6 +9,7 @@ from app.morphology import apply_morphology
 from app.detection import detect_storm_cells
 from app.visualization import draw_storm_cells
 from app.reflectivity import segment_by_dbz
+from app.radar_profiles import validate_ezeiza_radar
 
 
 #se mantienen ambas funciones de segmentacion
@@ -52,8 +53,13 @@ def analyze_radar(
             colors=colors
         )
 
+
     elif segmentation_mode == "dbz":
 
+        # Verificar que la imagen tenga una escala compatible
+        validate_ezeiza_radar(full_image)
+
+        # Segmentar segun reflectividad estimada
         mask = segment_by_dbz(
             filtered,
             full_image,
