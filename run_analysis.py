@@ -5,6 +5,7 @@ from pathlib import Path
 import cv2
 
 from app.pipeline import analyze_radar
+from app.export_results import save_cells_csv
 
 
 """
@@ -101,16 +102,24 @@ def main():
         "resultado.png": analysis["result"]
     }
 
+    # Guardar imagenes procesadas
     for filename, image in images.items():
+
         success = cv2.imwrite(
             str(output_dir / filename),
             image
         )
+
         if not success:
             raise RuntimeError(
                 f"No se pudo guardar {filename}"
             )
 
+    # Exportar estadisticas a CSV
+    csv_path = save_cells_csv(
+        analysis["cells"],
+        output_dir / "nucleos.csv"
+    )
     print("\nKERAUNEOS-SENTINEL")
     print("-" * 30)
     print(f"Nucleos detectados: {analysis['total_cells']}")
