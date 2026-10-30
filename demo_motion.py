@@ -55,9 +55,8 @@ def main():
     result = draw_motion_vectors(
         image2,
         motion,
-        max_vectors=60
+        max_vectors=30
     )
-
     # Guardar resultados
     output_dir = Path("outputs")
     output_dir.mkdir(exist_ok=True)
