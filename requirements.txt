@@ -6,3 +6,5 @@ pytest #comprobacion de funciones (ver si andan)
 fastapi #conectar con el frontend
 uvicorn #ejecutar el servidor
 python-multipart #recibir las imagenes del usuario
+httpx #para probar la API automaticamente, utuiliza uploadfile, file y form para recibir imagene sy aprametros
+httpx2
