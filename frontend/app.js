@@ -8,7 +8,7 @@ const feedback = document.querySelector("#form-feedback");
 const thresholdBlock = document.querySelector("#threshold-block");
 const segmentationMode = document.querySelector("#segmentation-mode");
 const thresholdRange = document.querySelector("#threshold-dbz");
-const enableRoi = document.querySelector("#enable-roi");
+
 const viewer = document.querySelector("#radar-image");
 const placeholder = document.querySelector("#image-placeholder");
 const dimensions = document.querySelector("#image-dimensions");
@@ -106,9 +106,9 @@ function updateSegmentOptions() {
 }
 segmentationMode.addEventListener("change", updateSegmentOptions);
 thresholdRange.addEventListener("input", () => { document.querySelector("#threshold-value").textContent = `${thresholdRange.value} dBZ`; });
-enableRoi.addEventListener("change", () => {
-  for (const id of ["roi-x1", "roi-y1", "roi-x2", "roi-y2"]) document.getElementById(id).disabled = !enableRoi.checked;
-});
+
+
+
 viewTabs.forEach(tab => tab.addEventListener("click", () => setView(tab.dataset.view)));
 
 function appendCell(row, value) {
@@ -155,13 +155,7 @@ form.addEventListener("submit", async event => {
   if (selectedFile.size > 10 * 1024 * 1024) { setFeedback("El archivo supera los 10 MB permitidos.", "error"); return; }
   const data = new FormData(form);
   data.set("image", selectedFile);
-  if (enableRoi.checked) {
-    const xs = ["roi-x1", "roi-y1", "roi-x2", "roi-y2"].map(id => Number(document.getElementById(id).value));
-    if (!xs.every(Number.isInteger) || xs[0] < 0 || xs[1] < 0 || xs[2] <= xs[0] || xs[3] <= xs[1]) {
-      setFeedback("ROI inválida: verificá las coordenadas X1, Y1, X2 e Y2.", "error"); return;
-    }
-    data.set("roi", xs.join(","));
-  }
+
   analyzeButton.disabled = true;
   analyzeButton.textContent = "Procesando imagen…";
   setFeedback("Procesando imagen en el backend…");
