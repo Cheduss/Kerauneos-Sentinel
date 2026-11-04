@@ -20,7 +20,7 @@
       </div>
       <div><div class="brand-name">KERAUNEOS<span>·</span>SENTINEL</div><div class="brand-caption">RADAR INTELLIGENCE / IMAGE PROCESSING</div></div>
     </div>
-    <div class="topbar-right"><span class="pulse-dot" aria-hidden="true"></span><span>Procesamiento local</span><span class="topbar-divider"></span><span class="version">v0.1 · Proyecto académico</span></div>
+    <div class="topbar-right"><span class="pulse-dot" aria-hidden="true"></span><span>Procesamiento local</span><span class="topbar-divider"></span><span class="version">v0.1</span></div>
   </header>
 
   <main class="workspace">
@@ -66,7 +66,9 @@
             <div class="field-block"><label class="field-label" for="morphology-operation">Morfología</label><select id="morphology-operation" name="morphology_operation"><option value="opening">Apertura</option><option value="closing">Cierre</option><option value="none">Ninguna</option><option value="erosion">Erosión</option><option value="dilation">Dilatación</option></select></div>
           </div>
           <div class="field-block"><div class="field-header"><label class="field-label" for="min-area">Área mínima</label><span class="field-unit">píxeles²</span></div><input id="min-area" name="min_area" type="number" min="1" step="1" value="100" required><p class="field-hint">Descarta regiones conectadas más pequeñas que este valor.</p></div>
-          <details class="advanced"><summary>Recorte de región (ROI) <span class="chevron" aria-hidden="true">⌄</span></summary><div class="advanced-content"><label class="check-line"><input type="checkbox" id="enable-roi"> Activar recorte de imagen</label><div class="roi-grid" id="roi-fields"><label>X1<input id="roi-x1" type="number" min="0" value="8" disabled></label><label>Y1<input id="roi-y1" type="number" min="0" value="92" disabled></label><label>X2<input id="roi-x2" type="number" min="1" value="659" disabled></label><label>Y2<input id="roi-y2" type="number" min="1" value="739" disabled></label></div><p class="field-hint">Coordenadas de la imagen completa. Los valores iniciales corresponden al recorte de prueba de Ezeiza.</p></div></details>
+          <!-- Compatibilidad temporal con app.js; ROI automatica desde el backend. -->
+          <input type="checkbox" id="enable-roi" hidden>
+
           <button class="primary-button" id="analyze-button" type="submit"><span aria-hidden="true">⌁</span> Ejecutar análisis <span class="button-arrow" aria-hidden="true">→</span></button>
           <p class="form-feedback" id="form-feedback" role="status" aria-live="polite">Seleccioná una imagen para comenzar.</p>
         </form>
