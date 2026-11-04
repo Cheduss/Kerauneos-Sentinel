@@ -15,6 +15,9 @@ from app.motion_visualization import draw_motion_vectors
 import cv2
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 
 from app.pipeline import analyze_radar
 from app.storm_tracking import estimate_storm_motion
@@ -32,6 +35,24 @@ app = FastAPI(
     description="Analisis de imagenes de radar meteorologico",
     version="0.1.0"
 )
+
+
+# Carpeta donde se encuentra el frontend
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+# Servir archivos CSS y JavaScript
+app.mount(
+    "/static",
+    StaticFiles(directory=FRONTEND_DIR),
+    name="static"
+)
+
+
+# Mostrar el frontend desde el navegador
+@app.get("/app", include_in_schema=False)
+def frontend_page():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg"}
