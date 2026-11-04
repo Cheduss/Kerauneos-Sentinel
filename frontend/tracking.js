@@ -34,7 +34,6 @@ const trackImage1 = document.querySelector("#track-image1");
 const trackImage2 = document.querySelector("#track-image2");
 const trackButton = document.querySelector("#track-button");
 const trackFeedback = document.querySelector("#track-feedback");
-const trackEnableRoi = document.querySelector("#track-enable-roi");
 const trackMode = document.querySelector("#tracking-mode");
 const trackViews = [...document.querySelectorAll(".track-view-tab")];
 const trackImage = document.querySelector("#tracking-image");
@@ -46,6 +45,16 @@ const trackDx = document.querySelector("#track-dx");
 const trackDy = document.querySelector("#track-dy");
 const trackPoints = document.querySelector("#track-points");
 const trackCandidates = document.querySelector("#track-candidates");
+const trackVectorsBody = document.querySelector("#track-vectors-body");
+const trackVectorCount = document.querySelector("#track-vector-count");
+
+// El resumen muestra magnitud y dirección del desplazamiento mediano,
+// no la velocidad de una celda individual.
+trackDx.parentElement.querySelector(".metric-label").textContent = "Magnitud del vector mediano";
+trackDx.parentElement.querySelector("small").textContent = "píxeles entre T1 y T2";
+trackDy.parentElement.querySelector(".metric-label").textContent = "Dirección del vector mediano";
+trackDy.parentElement.querySelector("small").textContent = "0° N · 90° E · 180° S";
+
 const trackDownloadImage = document.querySelector("#track-download-image");
 const trackDownloadJson = document.querySelector("#track-download-json");
 
@@ -53,6 +62,58 @@ let trackResults = null;
 let trackCurrentView = "first";
 let trackPreviewUrls = { first: null, second: null };
 let trackRequestVersion = 0;
+
+// Ejes de imagen: X hacia la derecha, Y hacia abajo.
+// Con norte arriba, atan2(dx, -dy) da el azimut horario desde el norte.
+function trackVectorStatistics(vector) {
+  const dx = Number(vector.x2) - Number(vector.x1);
+  const dy = Number(vector.y2) - Number(vector.y1);
+  const distance = Math.hypot(dx, dy);
+  const direction = distance < 1e-9
+    ? null
+    : (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  return { dx, dy, distance, direction };
+}
+
+function trackRenderVectorTable(data) {
+  trackVectorsBody.replaceChildren();
+  const maxArrows = Math.max(1, Number(document.querySelector("#track-max-vectors").value) || 60);
+  // Coincidir con el muestreo de draw_motion_vectors() en Python.
+  const step = Math.max(1, Math.ceil(data.vectors.length / maxArrows));
+  const selected = data.vectors
+    .filter((_, i) => i % step === 0)
+    .slice(0, maxArrows)
+    .map(trackVectorStatistics)
+    .filter(v => v.distance >= 1);  // min_displacement=1 en el backend
+
+  if (!selected.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.className = "empty-table";
+    cell.colSpan = 5;
+    cell.textContent = "No hay flechas visibles para mostrar.";
+    row.append(cell);
+    trackVectorsBody.append(row);
+  } else {
+    for (const [i, v] of selected.entries()) {
+      const row = document.createElement("tr");
+      const cells = [
+        String(i + 1),
+        v.dx.toFixed(2),
+        v.dy.toFixed(2),
+        v.distance.toFixed(2),
+        v.direction === null ? "—" : `${v.direction.toFixed(1)}°`
+      ];
+      for (const value of cells) {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.append(cell);
+      }
+      trackVectorsBody.append(row);
+    }
+  }
+  trackVectorCount.textContent = `${selected.length} flechas mostradas · ${data.tracked_points} puntos seguidos`;
+}
 
 function trackMessage(message, kind = "") {
   trackFeedback.className = `form-feedback ${kind}`;
@@ -91,6 +152,8 @@ function trackReset() {
   trackResults = null;
   trackDx.textContent = "—";
   trackDy.textContent = "—";
+  trackVectorCount.textContent = "Sin análisis";
+  trackVectorsBody.innerHTML = '<tr><td class="empty-table" colspan="5">Ejecutá el seguimiento para ver el detalle de los vectores.</td></tr>';
   trackPoints.textContent = "—";
   trackCandidates.textContent = "Sin análisis";
   trackDimensions.textContent = "Sin procesar";
@@ -120,13 +183,6 @@ trackImage.addEventListener("load", () => {
   if (!trackImage.hidden) trackDimensions.textContent = `${trackImage.naturalWidth} × ${trackImage.naturalHeight} px`;
 });
 
-trackEnableRoi.addEventListener("change", () => {
-  for (const id of ["track-roi-x1", "track-roi-y1", "track-roi-x2", "track-roi-y2"]) {
-    document.getElementById(id).disabled = !trackEnableRoi.checked;
-  }
-  trackReset();
-});
-
 function trackValidateFile(file) {
   if (!file) return "Seleccioná dos imágenes de radar.";
   const isImage = ["image/png", "image/jpeg"].includes(file.type)
@@ -137,20 +193,15 @@ function trackValidateFile(file) {
   return null;
 }
 
-function trackGetRoi() {
-  if (!trackEnableRoi.checked) return null;
-  const values = ["track-roi-x1", "track-roi-y1", "track-roi-x2", "track-roi-y2"]
-    .map(id => Number(document.getElementById(id).value));
-  if (!values.every(Number.isInteger) || values[0] < 0 || values[1] < 0 || values[2] <= values[0] || values[3] <= values[1]) {
-    throw new Error("El ROI debe cumplir 0 ≤ X1 < X2 y 0 ≤ Y1 < Y2.");
-  }
-  return values.join(",");
-}
-
 function trackDisplayResult(data) {
   trackResults = data;
-  trackDx.textContent = `${data.dx_pixels >= 0 ? "+" : ""}${data.dx_pixels.toFixed(2)} px`;
-  trackDy.textContent = `${data.dy_pixels >= 0 ? "+" : ""}${data.dy_pixels.toFixed(2)} px`;
+  const medianVector = trackVectorStatistics({
+    x1: 0, y1: 0, x2: data.dx_pixels, y2: data.dy_pixels
+  });
+  trackDx.textContent = data.tracked_points ? `${medianVector.distance.toFixed(2)} px` : "—";
+  trackDy.textContent = data.tracked_points && medianVector.direction !== null
+    ? `${medianVector.direction.toFixed(1)}°` : "—";
+  trackRenderVectorTable(data);
   trackPoints.textContent = String(data.tracked_points);
   trackCandidates.textContent = data.candidate_points === null
     ? "Modo general"
@@ -175,10 +226,7 @@ trackForm.addEventListener("submit", async event => {
   }
 
   const formData = new FormData(trackForm);
-  let roi;
-  try { roi = trackGetRoi(); }
-  catch (error) { trackMessage(error.message, "error"); return; }
-  if (roi) formData.set("roi", roi);
+  // Recorte automatico gestionado exclusivamente por FastAPI.
 
   trackButton.disabled = true;
   trackButton.textContent = "Estimando movimiento…";
@@ -223,6 +271,17 @@ trackDownloadJson.addEventListener("click", () => {
   if (!trackResults) return;
   // Se exportan datos numéricos y vectores; no se incluyen las imágenes en Base64.
   const { images, ...numericResults } = trackResults;
+  // El JSON conserva todos los puntos, con magnitud y dirección por vector.
+  numericResults.vectors = trackResults.vectors.map(vector => {
+    const { dx, dy, distance, direction } = trackVectorStatistics(vector);
+    return {
+      ...vector,
+      dx_pixels: Number(dx.toFixed(2)),
+      dy_pixels: Number(dy.toFixed(2)),
+      displacement_pixels: Number(distance.toFixed(2)),
+      direction_degrees: direction === null ? null : Number(direction.toFixed(1))
+    };
+  });
   const url = URL.createObjectURL(new Blob([JSON.stringify(numericResults, null, 2)], { type: "application/json" }));
   trackSaveUrl(url, "seguimiento_radar.json");
   setTimeout(() => URL.revokeObjectURL(url), 1000);
