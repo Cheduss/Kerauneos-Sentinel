@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1424">
+  <meta name="description" content="Kerauneos-Sentinel: detección y análisis visual de núcleos convectivos en imágenes de radar meteorológico.">
+  <title>Kerauneos-Sentinel · Laboratorio radar</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script defer src="/static/app.js"></script>
+  <script defer src="/static/tracking.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-symbol" aria-hidden="true">
+        <svg viewBox="0 0 36 36" fill="none"><path d="M19 3 7 19h9l-2 14 15-19h-9l-1-11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+      <div><div class="brand-name">KERAUNEOS<span>·</span>SENTINEL</div><div class="brand-caption">RADAR INTELLIGENCE / IMAGE PROCESSING</div></div>
+    </div>
+    <div class="topbar-right"><span class="pulse-dot" aria-hidden="true"></span><span>Procesamiento local</span><span class="topbar-divider"></span><span class="version">v0.1 · Proyecto académico</span></div>
+  </header>
+
+  <main class="workspace">
+    <div class="page-heading">
+      <div><div class="eyebrow">PLATAFORMA DE ANÁLISIS</div><h1>Explorador de núcleos <span>convectivos</span></h1><p>Segmentá ecos, identificá regiones y explorá sus características en una sola interfaz.</p></div>
+      <span class="heading-pill"><span class="pill-marker"></span> DETECCIÓN DE NÚCLEOS</span>
+    </div>
+
+    <nav class="mode-switch" aria-label="Módulos de Kerauneos-Sentinel">
+      <button id="module-detection" class="mode-button active" type="button" aria-pressed="true" aria-controls="detection-workspace"><span class="mode-icon" aria-hidden="true">◉</span> Detección de núcleos</button>
+      <button id="module-tracking" class="mode-button" type="button" aria-pressed="false" aria-controls="tracking-workspace"><span class="mode-icon" aria-hidden="true">↗</span> Seguimiento temporal</button>
+    </nav>
+
+    <div class="layout" id="detection-workspace">
+      <aside class="panel settings-panel" aria-labelledby="settings-heading">
+        <div class="panel-header"><div><span class="section-kicker">01 / CONFIGURACIÓN</span><h2 id="settings-heading">Parámetros</h2></div><span class="header-icon" aria-hidden="true">⚙</span></div>
+        <form id="analysis-form">
+          <div class="field-block">
+            <label class="field-label" for="image-file">Imagen de radar <span class="required">*</span></label>
+            <label for="image-file" class="upload-zone" id="upload-zone">
+              <span class="upload-symbol" aria-hidden="true">↑</span>
+              <span class="upload-title">Seleccionar archivo</span>
+              <span class="upload-subtitle">PNG o JPG · máximo 10 MB</span>
+            </label>
+            <input id="image-file" name="image" type="file" accept="image/png,image/jpeg" required class="visually-hidden">
+            <p class="file-name" id="file-name">Sin archivo seleccionado</p>
+          </div>
+          <div class="field-block">
+            <label class="field-label" for="segmentation-mode">Método de segmentación</label>
+            <select id="segmentation-mode" name="segmentation_mode">
+              <option value="hsv">HSV · Rojo y magenta</option>
+              <option value="dbz">Reflectividad · dBZ aproximados</option>
+            </select>
+          </div>
+          <div class="field-block" id="threshold-block" hidden>
+            <div class="field-header"><label class="field-label" for="threshold-dbz">Umbral de reflectividad</label><output class="numeric-chip" id="threshold-value" for="threshold-dbz">40 dBZ</output></div>
+            <input id="threshold-dbz" name="threshold_dbz" type="range" min="-15" max="75" step="5" value="40">
+            <div class="range-labels"><span>−15 dBZ</span><span>75 dBZ</span></div>
+            <p class="field-hint warning-hint">Solo compatible con capturas del formato Ezeiza-SINARAME calibrado en este proyecto.</p>
+          </div>
+          <div class="form-grid">
+            <div class="field-block"><label class="field-label" for="filter-type">Filtro espacial</label><select id="filter-type" name="filter_type"><option value="none">Sin filtro</option><option value="gaussian">Gaussiano</option><option value="median">Mediana</option><option value="average">Promedio</option></select></div>
+            <div class="field-block"><label class="field-label" for="morphology-operation">Morfología</label><select id="morphology-operation" name="morphology_operation"><option value="opening">Apertura</option><option value="closing">Cierre</option><option value="none">Ninguna</option><option value="erosion">Erosión</option><option value="dilation">Dilatación</option></select></div>
+          </div>
+          <div class="field-block"><div class="field-header"><label class="field-label" for="min-area">Área mínima</label><span class="field-unit">píxeles²</span></div><input id="min-area" name="min_area" type="number" min="1" step="1" value="100" required><p class="field-hint">Descarta regiones conectadas más pequeñas que este valor.</p></div>
+          <details class="advanced"><summary>Recorte de región (ROI) <span class="chevron" aria-hidden="true">⌄</span></summary><div class="advanced-content"><label class="check-line"><input type="checkbox" id="enable-roi"> Activar recorte de imagen</label><div class="roi-grid" id="roi-fields"><label>X1<input id="roi-x1" type="number" min="0" value="8" disabled></label><label>Y1<input id="roi-y1" type="number" min="0" value="92" disabled></label><label>X2<input id="roi-x2" type="number" min="1" value="659" disabled></label><label>Y2<input id="roi-y2" type="number" min="1" value="739" disabled></label></div><p class="field-hint">Coordenadas de la imagen completa. Los valores iniciales corresponden al recorte de prueba de Ezeiza.</p></div></details>
+          <button class="primary-button" id="analyze-button" type="submit"><span aria-hidden="true">⌁</span> Ejecutar análisis <span class="button-arrow" aria-hidden="true">→</span></button>
+          <p class="form-feedback" id="form-feedback" role="status" aria-live="polite">Seleccioná una imagen para comenzar.</p>
+        </form>
+      </aside>
+
+      <section class="right-column">
+        <section class="panel viewer-panel" aria-labelledby="viewer-heading">
+          <div class="viewer-header"><div><span class="section-kicker">02 / EXPLORACIÓN</span><h2 id="viewer-heading">Visualizador de radar</h2></div><span class="image-dimensions" id="image-dimensions">Sin imagen</span></div>
+          <div class="viewer-toolbar"><div class="view-tabs" role="group" aria-label="Vista de imagen"><button type="button" class="view-tab active" data-view="original" aria-pressed="true">Original</button><button type="button" class="view-tab" data-view="mask" aria-pressed="false" disabled>Máscara binaria</button><button type="button" class="view-tab" data-view="result" aria-pressed="false" disabled>Procesada</button></div><span class="viewer-status"><span class="status-dot"></span><span id="viewer-status">Sin procesar</span></span></div>
+          <div class="image-stage" id="image-stage"><div class="image-placeholder" id="image-placeholder"><div class="placeholder-radar" aria-hidden="true"><span class="radar-ring ring-1"></span><span class="radar-ring ring-2"></span><span class="radar-ring ring-3"></span><span class="radar-beam"></span><span class="radar-center"></span></div><strong>Tu radar aparece aquí</strong><span>Cargá una imagen para visualizarla y analizar sus ecos.</span></div><img id="radar-image" alt="Vista seleccionada de la imagen de radar" hidden></div>
+          <div class="viewer-footer"><span><span class="tiny-square"></span> Las máscaras y resultados se calculan en el backend de Python.</span><button type="button" class="secondary-button" id="download-image" disabled>↓ Descargar imagen</button></div>
+        </section>
+
+        <section class="panel results-panel" aria-labelledby="results-heading"><div class="results-header"><div><span class="section-kicker">03 / RESULTADOS</span><h2 id="results-heading">Núcleos detectados</h2></div><div class="results-actions"><span class="total-count" id="total-cells">— <small>núcleos</small></span><button type="button" class="secondary-button" id="download-csv" disabled>↓ Exportar CSV</button></div></div>
+          <div class="table-scroll"><table><thead><tr><th>N.º</th><th>Área (px²)</th><th>Centroide (x, y)</th><th>Bounding box (x, y, ancho, alto)</th></tr></thead><tbody id="results-body"><tr><td colspan="4" class="empty-table">Los núcleos identificados aparecerán aquí después del análisis.</td></tr></tbody></table></div>
+        </section>
+      </section>
+    </div>
+    <section class="tracking-layout" id="tracking-workspace" aria-label="Seguimiento temporal" hidden>
+      <aside class="panel settings-panel" aria-labelledby="tracking-settings-heading">
+        <div class="panel-header"><div><span class="section-kicker">01 / SEGUIMIENTO</span><h2 id="tracking-settings-heading">Dos instantes</h2></div><span class="header-icon" aria-hidden="true">↗</span></div>
+        <form id="tracking-form">
+          <div class="field-block">
+            <label class="field-label" for="track-image1">Radar T1 <span class="required">*</span></label>
+            <input class="tracking-file-input" type="file" id="track-image1" name="image1" accept="image/png,image/jpeg" required>
+            <p class="field-hint">Primer instante · PNG o JPG, hasta 10 MB</p>
+          </div>
+          <div class="field-block">
+            <label class="field-label" for="track-image2">Radar T2 <span class="required">*</span></label>
+            <input class="tracking-file-input" type="file" id="track-image2" name="image2" accept="image/png,image/jpeg" required>
+            <p class="field-hint">Segundo instante · misma dimensión y encuadre</p>
+          </div>
+          <div class="field-block">
+            <label class="field-label" for="tracking-mode">Método de seguimiento</label>
+            <select id="tracking-mode" name="tracking_mode">
+              <option value="precipitation">Precipitación · rojo y magenta</option>
+              <option value="general">General · toda la imagen</option>
+            </select>
+            <p class="field-hint">En modo precipitación se seleccionan inicialmente puntos dentro de ecos rojos o magentas (HSV).</p>
+          </div>
+          <div class="form-grid">
+            <div class="field-block"><label class="field-label" for="track-max-corners">Puntos candidatos</label><input id="track-max-corners" name="max_corners" type="number" min="1" max="1000" value="200" required></div>
+            <div class="field-block"><label class="field-label" for="track-max-vectors">Flechas visibles</label><input id="track-max-vectors" name="max_vectors" type="number" min="1" max="200" value="60" required></div>
+          </div>
+          <details class="advanced">
+            <summary>Recorte común (ROI) <span class="chevron" aria-hidden="true">⌄</span></summary>
+            <div class="advanced-content">
+              <label class="check-line"><input type="checkbox" id="track-enable-roi"> Activar recorte en ambos radares</label>
+              <div class="roi-grid" id="tracking-roi-fields">
+                <label>X1<input type="number" id="track-roi-x1" min="0" value="8" disabled></label>
+                <label>Y1<input type="number" id="track-roi-y1" min="0" value="92" disabled></label>
+                <label>X2<input type="number" id="track-roi-x2" min="1" value="659" disabled></label>
+                <label>Y2<input type="number" id="track-roi-y2" min="1" value="739" disabled></label>
+              </div>
+              <p class="field-hint">Valores iniciales para las capturas completas de Ezeiza utilizadas en las pruebas.</p>
+            </div>
+          </details>
+          <button class="primary-button" type="submit" id="track-button"><span aria-hidden="true">↗</span> Estimar desplazamiento <span class="button-arrow" aria-hidden="true">→</span></button>
+          <p id="track-feedback" class="form-feedback" role="status" aria-live="polite">Cargá dos imágenes para comenzar.</p>
+          <div class="tracking-note">Este análisis estima desplazamientos <strong>en píxeles entre imágenes</strong>; no supone intervalos temporales fijos ni calcula velocidades en km/h.</div>
+        </form>
+      </aside>
+      <div class="right-column">
+        <section class="panel viewer-panel" aria-labelledby="tracking-viewer-heading">
+          <div class="viewer-header"><div><span class="section-kicker">02 / DESPLAZAMIENTO</span><h2 id="tracking-viewer-heading">Visualizador temporal</h2></div><span class="image-dimensions" id="track-image-dimensions">Sin imágenes</span></div>
+          <div class="viewer-toolbar"><div class="view-tabs" role="group" aria-label="Imágenes del seguimiento">
+            <button class="track-view-tab view-tab active" type="button" data-track-view="first" aria-pressed="true">Radar T1</button>
+            <button class="track-view-tab view-tab" type="button" data-track-view="second" aria-pressed="false">Radar T2</button>
+            <button class="track-view-tab view-tab" type="button" data-track-view="motion" aria-pressed="false" disabled>Movimiento</button>
+          </div><span class="viewer-status" id="track-status"><span class="status-dot"></span><span id="track-status-text">Sin procesar</span></span></div>
+          <div class="image-stage" id="tracking-image-stage">
+            <div class="image-placeholder" id="tracking-placeholder"><div class="placeholder-radar" aria-hidden="true"><span class="radar-ring ring-1"></span><span class="radar-ring ring-2"></span><span class="radar-ring ring-3"></span><span class="radar-beam"></span><span class="radar-center"></span></div><strong>Compará dos radares</strong><span>Seleccioná T1 y T2 para estimar el desplazamiento aparente de los ecos.</span></div>
+            <img id="tracking-image" alt="Imagen seleccionada del análisis temporal" hidden>
+          </div>
+          <div class="viewer-footer"><span><span class="tiny-square"></span> Las flechas muestran trayectorias ópticas estimadas, no velocidades meteorológicas validadas.</span><button type="button" class="secondary-button" id="track-download-image" disabled>↓ Descargar PNG</button></div>
+        </section>
+        <section class="panel results-panel" aria-labelledby="tracking-results-heading">
+          <div class="results-header tracking-results-header"><div><span class="section-kicker">03 / RESULTADOS</span><h2 id="tracking-results-heading">Movimiento estimado</h2></div><button type="button" class="secondary-button" id="track-download-json" disabled>↓ Exportar JSON</button></div>
+          <div class="tracking-metrics">
+            <div class="metric"><span class="metric-label">DX mediano</span><strong id="track-dx">—</strong><small>píxeles / intervalo</small></div>
+            <div class="metric"><span class="metric-label">DY mediano</span><strong id="track-dy">—</strong><small>píxeles / intervalo</small></div>
+            <div class="metric"><span class="metric-label">Puntos seguidos</span><strong id="track-points">—</strong><small id="track-candidates">Sin análisis</small></div>
+          </div>
+          <p class="tracking-disclaimer" id="tracking-disclaimer">El desplazamiento es aparente y puede incluir cambios de forma, crecimiento de ecos e interferencias de anotaciones del mapa. El eje Y crece hacia abajo.</p>
+        </section>
+      </div>
+    </section>
+
+    <footer class="footer"><span>KERAUNEOS-SENTINEL <span class="footer-slash">/</span> Procesamiento digital de imágenes</span><span>Las estimaciones de dBZ sobre capturas son aproximadas.</span></footer>
+  </main>
+</body>
+</html>
