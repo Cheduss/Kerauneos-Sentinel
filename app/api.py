@@ -18,8 +18,8 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-
-from app.pipeline import analyze_radar
+from app.pipeline import analyze_radar, EZEIZA_AUTO_ROI
+from app.radar_profiles import validate_ezeiza_radar
 from app.storm_tracking import estimate_storm_motion
 
 
@@ -36,19 +36,10 @@ app = FastAPI(
     version="0.1.0"
 )
 
-
-# Carpeta donde se encuentra el frontend
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-
-# Servir archivos CSS y JavaScript
-app.mount(
-    "/static",
-    StaticFiles(directory=FRONTEND_DIR),
-    name="static"
-)
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
-# Mostrar el frontend desde el navegador
 @app.get("/app", include_in_schema=False)
 def frontend_page():
     return FileResponse(FRONTEND_DIR / "index.html")
@@ -267,87 +258,123 @@ async def track_storms(
     max_corners: int = Form(200, ge=1, le=1000),
     max_vectors: int = Form(60, ge=1, le=200),
     roi: str | None = Form(None),
-    tracking_mode: Literal[
-        "general", "precipitation"
-    ] = Form("general")
+    tracking_mode: Literal["general", "precipitation"] = Form("general"),
 ):
-
     """
-    Estima el movimiento aparente entre dos imagenes
-    mediante flujo optico Lucas-Kanade.
-    """
+    Estima movimiento con Lucas-Kanade.
 
+    Para dos capturas completas reconocidas como Ezeiza-SINARAME,
+    la ROI se aplica automaticamente y SOLO internamente.
+    Devuelve las capturas originales y flechas sobre la imagen completa.
+
+    En imagenes no reconocidas no se asume ninguna ROI.
+    La ROI explicita sigue funcionando por compatibilidad con la API.
+    """
     try:
-        # 1. Cargar ambas imagenes
-        first = await read_uploaded_radar(image1)
-        second = await read_uploaded_radar(image2)
+        full_first = await read_uploaded_radar(image1)
+        full_second = await read_uploaded_radar(image2)
 
-        # 2. Validar dimensiones
-        if first.shape != second.shape:
+        if full_first.shape != full_second.shape:
             raise HTTPException(
                 status_code=400,
                 detail="Las imagenes deben tener las mismas dimensiones."
             )
 
-        # 3. Recortar la misma region en ambas imagenes
+        # ROI manual opcional (compatibilidad con versiones anteriores).
         coordinates = parse_roi(roi)
+        automatic_roi = False
 
+        # Solo aplicar el recorte automatico si AMBOS radares
+        # tienen el mismo perfil reconocido. No basta con el tamano.
+        if coordinates is None:
+            try:
+                validate_ezeiza_radar(full_first)
+                validate_ezeiza_radar(full_second)
+            except ValueError:
+                # Radar desconocido: procesar la captura completa.
+                pass
+            else:
+                coordinates = EZEIZA_AUTO_ROI
+                automatic_roi = True
+
+        # Trabajar con las mismas coordenadas en T1 y T2.
         if coordinates is not None:
             try:
-                first = crop_radar(first, *coordinates)
-                second = crop_radar(second, *coordinates)
+                work_first = crop_radar(full_first, *coordinates)
+                work_second = crop_radar(full_second, *coordinates)
             except ValueError as error:
                 raise HTTPException(
                     status_code=400,
                     detail=str(error)
                 ) from error
+        else:
+            work_first = full_first
+            work_second = full_second
 
-        # 4. Calcular flujo optico
         try:
-
             if tracking_mode == "general":
                 motion = estimate_motion(
-                    first,
-                    second,
-                    max_corners=max_corners
+                    work_first,
+                    work_second,
+                    max_corners=max_corners,
                 )
-
             else:
                 motion = estimate_storm_motion(
-                    first,
-                    second,
-                    max_corners=max_corners
+                    work_first,
+                    work_second,
+                    max_corners=max_corners,
                 )
 
-            # 5. Dibujar vectores sobre segunda imagen
-            result = draw_motion_vectors(
-                second,
+            # Dibujar sobre la ROI, de forma que el recuadro informativo
+            # NO tape el encabezado con fecha/hora de la captura completa.
+            work_result = draw_motion_vectors(
+                work_second,
                 motion,
-                max_vectors=max_vectors
+                max_vectors=max_vectors,
             )
-
         except (ValueError, cv2.error) as error:
             raise HTTPException(
                 status_code=400,
-                detail=str(error)
+                detail=str(error),
             ) from error
 
-        # 6. Devolver resultados al frontend
+        if coordinates is not None:
+            x1, y1, x2, y2 = coordinates
 
+            # Volver a insertar la region anotada en el radar completo.
+            full_result = full_second.copy()
+            full_result[y1:y2, x1:x2] = work_result
+
+            # Los vectores del JSON deben referirse a la imagen COMPLETA.
+            shifted_vectors = []
+            for vector in motion["vectors"]:
+                shifted_vectors.append({
+                    **vector,
+                    "x1": round(float(vector["x1"]) + x1, 2),
+                    "y1": round(float(vector["y1"]) + y1, 2),
+                    "x2": round(float(vector["x2"]) + x1, 2),
+                    "y2": round(float(vector["y2"]) + y1, 2),
+                })
+        else:
+            full_result = work_result
+            shifted_vectors = motion["vectors"]
+
+        # Desplazamientos dx/dy no cambian al sumar el origen de la ROI.
         return {
             "tracking_mode": tracking_mode,
             "candidate_points": motion.get("candidate_points"),
             "tracked_points": motion["tracked_points"],
             "dx_pixels": motion["dx_pixels"],
             "dy_pixels": motion["dy_pixels"],
-            "vectors": motion["vectors"],
+            "vectors": shifted_vectors,
+            "roi_used": coordinates,
+            "automatic_roi": automatic_roi,
             "images": {
-                "first": image_to_base64(first),
-                "second": image_to_base64(second),
-                "motion": image_to_base64(result)
-            }
+                "first": image_to_base64(full_first),
+                "second": image_to_base64(full_second),
+                "motion": image_to_base64(full_result),
+            },
         }
-
     finally:
         await image1.close()
         await image2.close()
