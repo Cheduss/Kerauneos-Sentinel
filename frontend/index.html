@@ -59,7 +59,7 @@
             <div class="field-header"><label class="field-label" for="threshold-dbz">Umbral de reflectividad</label><output class="numeric-chip" id="threshold-value" for="threshold-dbz">40 dBZ</output></div>
             <input id="threshold-dbz" name="threshold_dbz" type="range" min="-15" max="75" step="5" value="40">
             <div class="range-labels"><span>−15 dBZ</span><span>75 dBZ</span></div>
-            <p class="field-hint warning-hint">Solo compatible con capturas del formato Ezeiza-SINARAME calibrado en este proyecto.</p>
+            <p class="field-hint warning-hint">Compatible con capturas SINARAME que conserven el diseño y la escala de colores del perfil de referencia.</p>
           </div>
           <div class="form-grid">
             <div class="field-block"><label class="field-label" for="filter-type">Filtro espacial</label><select id="filter-type" name="filter_type"><option value="none">Sin filtro</option><option value="gaussian">Gaussiano</option><option value="median">Mediana</option><option value="average">Promedio</option></select></div>
@@ -115,7 +115,7 @@
           </div>
           <!-- Compatibilidad temporal con tracking.js; el backend detecta la ROI automaticamente. -->
           <input type="checkbox" id="track-enable-roi" hidden>
-          <p class="field-hint">En capturas reconocidas de Ezeiza, la zona util se recorta automaticamente y el resultado se muestra sobre la imagen completa.</p>
+          <p class="field-hint">En capturas SINARAME compatibles con el perfil de referencia, procesamos internamente la zona útil y mostramos la imagen completa.</p>
           <button class="primary-button" type="submit" id="track-button"><span aria-hidden="true">↗</span> Estimar desplazamiento <span class="button-arrow" aria-hidden="true">→</span></button>
           <p id="track-feedback" class="form-feedback" role="status" aria-live="polite">Cargá dos imágenes para comenzar.</p>
           <div class="tracking-note">Este análisis estima desplazamientos <strong>en píxeles entre imágenes</strong>; no supone intervalos temporales fijos ni calcula velocidades en km/h.</div>
@@ -142,6 +142,14 @@
             <div class="metric"><span class="metric-label">DY mediano</span><strong id="track-dy">—</strong><small>píxeles / intervalo</small></div>
             <div class="metric"><span class="metric-label">Puntos seguidos</span><strong id="track-points">—</strong><small id="track-candidates">Sin análisis</small></div>
           </div>
+          <div class="results-header"><div><span class="section-kicker">DETALLE VECTORIAL</span><h2 id="tracking-vectors-heading">Dirección de cada flecha</h2></div><span class="image-dimensions" id="track-vector-count">Sin análisis</span></div>
+          <div class="table-scroll" style="max-height:360px;overflow:auto" aria-labelledby="tracking-vectors-heading">
+            <table>
+              <thead><tr><th>Flecha</th><th>Δx (px)</th><th>Δy (px)</th><th>Desplazamiento (px)</th><th>Dirección (°)</th></tr></thead>
+              <tbody id="track-vectors-body"><tr><td class="empty-table" colspan="5">Ejecutá el seguimiento para ver el detalle de los vectores.</td></tr></tbody>
+            </table>
+          </div>
+          <p class="tracking-disclaimer">Dirección <strong>hacia donde se desplaza</strong> cada flecha: 0° = norte, 90° = este, 180° = sur, 270° = oeste, suponiendo norte arriba. Distancia en píxeles entre T1 y T2; no es una velocidad en km/h.</p>
           <p class="tracking-disclaimer" id="tracking-disclaimer">El desplazamiento es aparente y puede incluir cambios de forma, crecimiento de ecos e interferencias de anotaciones del mapa. El eje Y crece hacia abajo.</p>
         </section>
       </div>
