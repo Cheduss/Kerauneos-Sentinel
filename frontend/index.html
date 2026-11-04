@@ -113,19 +113,9 @@
             <div class="field-block"><label class="field-label" for="track-max-corners">Puntos candidatos</label><input id="track-max-corners" name="max_corners" type="number" min="1" max="1000" value="200" required></div>
             <div class="field-block"><label class="field-label" for="track-max-vectors">Flechas visibles</label><input id="track-max-vectors" name="max_vectors" type="number" min="1" max="200" value="60" required></div>
           </div>
-          <details class="advanced">
-            <summary>Recorte común (ROI) <span class="chevron" aria-hidden="true">⌄</span></summary>
-            <div class="advanced-content">
-              <label class="check-line"><input type="checkbox" id="track-enable-roi"> Activar recorte en ambos radares</label>
-              <div class="roi-grid" id="tracking-roi-fields">
-                <label>X1<input type="number" id="track-roi-x1" min="0" value="8" disabled></label>
-                <label>Y1<input type="number" id="track-roi-y1" min="0" value="92" disabled></label>
-                <label>X2<input type="number" id="track-roi-x2" min="1" value="659" disabled></label>
-                <label>Y2<input type="number" id="track-roi-y2" min="1" value="739" disabled></label>
-              </div>
-              <p class="field-hint">Valores iniciales para las capturas completas de Ezeiza utilizadas en las pruebas.</p>
-            </div>
-          </details>
+          <!-- Compatibilidad temporal con tracking.js; el backend detecta la ROI automaticamente. -->
+          <input type="checkbox" id="track-enable-roi" hidden>
+          <p class="field-hint">En capturas reconocidas de Ezeiza, la zona util se recorta automaticamente y el resultado se muestra sobre la imagen completa.</p>
           <button class="primary-button" type="submit" id="track-button"><span aria-hidden="true">↗</span> Estimar desplazamiento <span class="button-arrow" aria-hidden="true">→</span></button>
           <p id="track-feedback" class="form-feedback" role="status" aria-live="polite">Cargá dos imágenes para comenzar.</p>
           <div class="tracking-note">Este análisis estima desplazamientos <strong>en píxeles entre imágenes</strong>; no supone intervalos temporales fijos ni calcula velocidades en km/h.</div>
