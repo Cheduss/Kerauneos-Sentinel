@@ -1,10 +1,12 @@
+# Procesamiento de imagenes y calculo numerico
+numpy
+opencv-python
 
-numpy #matrices de pixeles
-opencv-python #carga de imagenesb
-Pillow #segmentacion de imagenes, filtros, deteccion de nucleos, etc.
-pytest #comprobacion de funciones (ver si andan)
-fastapi #conectar con el frontend
-uvicorn #ejecutar el servidor
-python-multipart #recibir las imagenes del usuario
-httpx #para probar la API automaticamente, utuiliza uploadfile, file y form para recibir imagene sy aprametros
-httpx2
+# Backend y servidor web
+fastapi
+uvicorn
+python-multipart
+
+# Pruebas automatizadas
+pytest
+httpx
