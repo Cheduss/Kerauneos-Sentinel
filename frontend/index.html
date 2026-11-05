@@ -32,6 +32,7 @@
     <nav class="mode-switch" aria-label="Módulos de Kerauneos-Sentinel">
       <button id="module-detection" class="mode-button active" type="button" aria-pressed="true" aria-controls="detection-workspace"><span class="mode-icon" aria-hidden="true">◉</span> Detección de núcleos</button>
       <button id="module-tracking" class="mode-button" type="button" aria-pressed="false" aria-controls="tracking-workspace"><span class="mode-icon" aria-hidden="true">↗</span> Seguimiento temporal</button>
+      <button id="module-glossary" class="mode-button" type="button" aria-pressed="false" aria-controls="glossary-workspace"><span class="mode-icon" aria-hidden="true">?</span> Glosario</button>
     </nav>
 
     <div class="layout" id="detection-workspace">
@@ -101,14 +102,9 @@
             <input class="tracking-file-input" type="file" id="track-image2" name="image2" accept="image/png,image/jpeg" required>
             <p class="field-hint">Segundo instante · misma dimensión y encuadre</p>
           </div>
-          <div class="field-block">
-            <label class="field-label" for="tracking-mode">Método de seguimiento</label>
-            <select id="tracking-mode" name="tracking_mode">
-              <option value="precipitation">Precipitación · rojo y magenta</option>
-              <option value="general">General · toda la imagen</option>
-            </select>
-            <p class="field-hint">En modo precipitación se seleccionan inicialmente puntos dentro de ecos rojos o magentas (HSV).</p>
-          </div>
+          <!-- Seguimiento restringido a ecos de precipitación; API conserva sus opciones internas. -->
+          <input type="hidden" id="tracking-mode" name="tracking_mode" value="precipitation">
+          <div class="tracking-note">El seguimiento selecciona puntos dentro de los <strong>ecos de precipitación rojos y magentas (HSV)</strong>, no en toda la imagen.</div>
           <div class="form-grid">
             <div class="field-block"><label class="field-label" for="track-max-corners">Puntos candidatos</label><input id="track-max-corners" name="max_corners" type="number" min="1" max="1000" value="200" required></div>
             <div class="field-block"><label class="field-label" for="track-max-vectors">Flechas visibles</label><input id="track-max-vectors" name="max_vectors" type="number" min="1" max="200" value="60" required></div>
@@ -152,6 +148,60 @@
           <p class="tracking-disclaimer">Dirección <strong>hacia donde se desplaza</strong> cada flecha: 0° = norte, 90° = este, 180° = sur, 270° = oeste, suponiendo norte arriba. Distancia en píxeles entre T1 y T2; no es una velocidad en km/h.</p>
           <p class="tracking-disclaimer" id="tracking-disclaimer">El desplazamiento es aparente y puede incluir cambios de forma, crecimiento de ecos e interferencias de anotaciones del mapa. El eje Y crece hacia abajo.</p>
         </section>
+      </div>
+    </section>
+
+    <section class="glossary-workspace" id="glossary-workspace" aria-labelledby="glossary-heading" hidden>
+      <div class="panel glossary-panel">
+        <div class="panel-header glossary-intro">
+          <div>
+            <span class="section-kicker">GUÍA / PROCESAMIENTO DE IMÁGENES</span>
+            <h2 id="glossary-heading">Glosario de técnicas</h2>
+            <p>Seleccioná un concepto para conocer qué hace y para qué lo usamos en Kerauneos-Sentinel.</p>
+          </div>
+          <span class="header-icon" aria-hidden="true">?</span>
+        </div>
+
+        <div class="glossary-content">
+          <div class="glossary-group">
+            <div class="glossary-group-heading"><span>01</span><h3>Segmentación</h3></div>
+            <div class="glossary-grid">
+              <details class="glossary-item"><summary>HSV <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Espacio de color que separa <strong>tono (H)</strong>, <strong>saturación (S)</strong> y <strong>valor o brillo (V)</strong>. En el proyecto permite seleccionar colores de ecos intensos, como rojos y magentas.</p></details>
+              <details class="glossary-item"><summary>Reflectividad (dBZ) <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Magnitud expresada en decibelios de reflectividad radar. En capturas SINARAME la estimamos <strong>aproximadamente a partir de la leyenda de colores</strong>; no equivale a leer el dato original calibrado.</p></details>
+              <details class="glossary-item"><summary>Umbralización <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Clasifica los píxeles según una condición. Por ejemplo, seleccionamos los colores asociados a una reflectividad estimada igual o superior al umbral elegido para generar una <strong>máscara binaria</strong>.</p></details>
+            </div>
+          </div>
+
+          <div class="glossary-group">
+            <div class="glossary-group-heading"><span>02</span><h3>Filtros espaciales</h3></div>
+            <div class="glossary-grid">
+              <details class="glossary-item"><summary>Gaussiano <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Suaviza la imagen mediante un promedio ponderado que da <strong>más importancia a los píxeles cercanos al centro</strong>. Reduce ruido y pequeños cambios de color, aunque puede difuminar bordes.</p></details>
+              <details class="glossary-item"><summary>Mediana <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Reemplaza cada píxel por la <strong>mediana de su vecindad</strong>. Resulta útil para reducir ruido impulsivo y suele conservar los bordes mejor que un promedio simple.</p></details>
+              <details class="glossary-item"><summary>Promedio (media) <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Reemplaza cada píxel por la <strong>media aritmética de los valores vecinos</strong>. Suaviza variaciones locales, pero también puede borrar detalles pequeños.</p></details>
+            </div>
+          </div>
+
+          <div class="glossary-group">
+            <div class="glossary-group-heading"><span>03</span><h3>Morfología matemática</h3></div>
+            <div class="glossary-grid">
+              <details class="glossary-item"><summary>Erosión <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p><strong>Reduce las regiones blancas</strong> de una máscara binaria. Ayuda a eliminar detalles pequeños, pero puede hacer desaparecer núcleos reducidos.</p></details>
+              <details class="glossary-item"><summary>Dilatación <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p><strong>Expande las regiones blancas</strong> de la máscara. Puede unir zonas próximas y rellenar pequeñas discontinuidades.</p></details>
+              <details class="glossary-item"><summary>Apertura <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Aplica <strong>erosión y luego dilatación</strong>. Permite quitar objetos pequeños aislados sin expandir las regiones principales.</p></details>
+              <details class="glossary-item"><summary>Cierre <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Aplica <strong>dilatación y luego erosión</strong>. Ayuda a cerrar huecos pequeños y conectar partes cercanas de una región.</p></details>
+            </div>
+          </div>
+
+          <div class="glossary-group">
+            <div class="glossary-group-heading"><span>04</span><h3>Detección y seguimiento</h3></div>
+            <div class="glossary-grid">
+              <details class="glossary-item"><summary>Componentes conectados <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Agrupa píxeles vecinos de una máscara para identificar <strong>regiones individuales</strong>. Calculamos el área, el centroide y el rectángulo delimitador de cada núcleo detectado.</p></details>
+              <details class="glossary-item"><summary>Área mínima <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Umbral en <strong>píxeles cuadrados</strong> utilizado para descartar regiones conectadas demasiado pequeñas. No representa directamente un área en km².</p></details>
+              <details class="glossary-item"><summary>Lucas–Kanade <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Algoritmo de <strong>flujo óptico</strong> que estima el movimiento aparente de puntos entre dos imágenes. En este proyecto lo restringimos a puntos seleccionados dentro de ecos de precipitación.</p></details>
+              <details class="glossary-item"><summary>Dirección (°) <span class="glossary-arrow" aria-hidden="true">⌄</span></summary><p>Orientación <strong>hacia donde apunta el desplazamiento</strong>, medida en grados horarios desde el norte: 0° norte, 90° este, 180° sur y 270° oeste, suponiendo que el norte esté arriba.</p></details>
+            </div>
+          </div>
+          <p class="glossary-footnote">Las máscaras y las flechas son resultados de procesamiento de imágenes. No representan por sí solas mediciones meteorológicas validadas ni velocidades en km/h.</p>
+        </div>
       </div>
     </section>
 
