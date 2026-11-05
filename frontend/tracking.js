@@ -1,40 +1,60 @@
 "use strict";
 
-// Navegación entre los dos módulos; app.js conserva el análisis de núcleos.
+// Navegación entre Detección, Seguimiento y Glosario.
 const detectionModule = document.querySelector("#module-detection");
 const trackingModule = document.querySelector("#module-tracking");
+const glossaryModule = document.querySelector("#module-glossary");
 const detectionWorkspace = document.querySelector("#detection-workspace");
 const trackingWorkspace = document.querySelector("#tracking-workspace");
+const glossaryWorkspace = document.querySelector("#glossary-workspace");
 const pageHeading = document.querySelector(".page-heading h1");
 const pageDescription = document.querySelector(".page-heading p");
 const pagePill = document.querySelector(".heading-pill");
 
 function activateModule(module) {
-  const isTracking = module === "tracking";
-  detectionWorkspace.hidden = isTracking;
-  trackingWorkspace.hidden = !isTracking;
-  detectionModule.classList.toggle("active", !isTracking);
-  trackingModule.classList.toggle("active", isTracking);
-  detectionModule.setAttribute("aria-pressed", String(!isTracking));
-  trackingModule.setAttribute("aria-pressed", String(isTracking));
-  pageHeading.innerHTML = isTracking
-    ? "Seguimiento de ecos <span>meteorológicos</span>"
-    : "Explorador de núcleos <span>convectivos</span>";
-  pageDescription.textContent = isTracking
-    ? "Compará dos imágenes consecutivas con Lucas–Kanade y visualizá su desplazamiento aparente."
-    : "Segmentá ecos, identificá regiones y explorá sus características en una sola interfaz.";
-  pagePill.lastChild.textContent = isTracking ? " SEGUIMIENTO TEMPORAL" : " DETECCIÓN DE NÚCLEOS";
+  const modes = [
+    { name: "detection", button: detectionModule, panel: detectionWorkspace },
+    { name: "tracking", button: trackingModule, panel: trackingWorkspace },
+    { name: "glossary", button: glossaryModule, panel: glossaryWorkspace }
+  ];
+  for (const item of modes) {
+    const active = item.name === module;
+    item.panel.hidden = !active;
+    item.button.classList.toggle("active", active);
+    item.button.setAttribute("aria-pressed", String(active));
+  }
+
+  const labels = {
+    detection: {
+      title: "Explorador de núcleos <span>convectivos</span>",
+      description: "Segmentá ecos, identificá regiones y explorá sus características en una sola interfaz.",
+      pill: " DETECCIÓN DE NÚCLEOS"
+    },
+    tracking: {
+      title: "Seguimiento de ecos <span>meteorológicos</span>",
+      description: "Compará dos imágenes con Lucas–Kanade y visualizá el desplazamiento aparente de ecos de precipitación.",
+      pill: " SEGUIMIENTO TEMPORAL"
+    },
+    glossary: {
+      title: "Glosario de <span>técnicas</span>",
+      description: "Conocé los métodos de procesamiento utilizados para detectar y seguir núcleos de precipitación.",
+      pill: " GUÍA DE CONCEPTOS"
+    }
+  };
+  pageHeading.innerHTML = labels[module].title;
+  pageDescription.textContent = labels[module].description;
+  pagePill.lastChild.textContent = labels[module].pill;
 }
 
 detectionModule.addEventListener("click", () => activateModule("detection"));
 trackingModule.addEventListener("click", () => activateModule("tracking"));
+glossaryModule.addEventListener("click", () => activateModule("glossary"));
 
 const trackForm = document.querySelector("#tracking-form");
 const trackImage1 = document.querySelector("#track-image1");
 const trackImage2 = document.querySelector("#track-image2");
 const trackButton = document.querySelector("#track-button");
 const trackFeedback = document.querySelector("#track-feedback");
-const trackMode = document.querySelector("#tracking-mode");
 const trackViews = [...document.querySelectorAll(".track-view-tab")];
 const trackImage = document.querySelector("#tracking-image");
 const trackPlaceholder = document.querySelector("#tracking-placeholder");
@@ -177,7 +197,6 @@ function trackRefreshPreview(which) {
 
 trackImage1.addEventListener("change", () => trackRefreshPreview("first"));
 trackImage2.addEventListener("change", () => trackRefreshPreview("second"));
-trackMode.addEventListener("change", () => { trackReset(); trackMessage("Método actualizado. Ejecutá nuevamente el seguimiento."); });
 trackViews.forEach(tab => tab.addEventListener("click", () => trackSetView(tab.dataset.trackView)));
 trackImage.addEventListener("load", () => {
   if (!trackImage.hidden) trackDimensions.textContent = `${trackImage.naturalWidth} × ${trackImage.naturalHeight} px`;
@@ -204,7 +223,7 @@ function trackDisplayResult(data) {
   trackRenderVectorTable(data);
   trackPoints.textContent = String(data.tracked_points);
   trackCandidates.textContent = data.candidate_points === null
-    ? "Modo general"
+    ? "Sin dato de candidatos"
     : `${data.candidate_points} candidatos iniciales`;
   trackViews.find(tab => tab.dataset.trackView === "motion").disabled = false;
   trackDownloadJson.disabled = false;
