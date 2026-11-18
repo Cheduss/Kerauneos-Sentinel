@@ -20,7 +20,7 @@
       </div>
       <div><div class="brand-name">KERAUNEOS<span>·</span>SENTINEL</div><div class="brand-caption">RADAR INTELLIGENCE / IMAGE PROCESSING</div></div>
     </div>
-    <div class="topbar-right"><span class="pulse-dot" aria-hidden="true"></span><span>Procesamiento local</span><span class="topbar-divider"></span><span class="version">v0.1</span></div>
+    <div class="topbar-right"><span class="pulse-dot" aria-hidden="true"></span><span>Procesamiento en servidor</span><span class="topbar-divider"></span><span class="version">v0.1</span></div>
   </header>
 
   <main class="workspace">
@@ -34,6 +34,10 @@
       <button id="module-tracking" class="mode-button" type="button" aria-pressed="false" aria-controls="tracking-workspace"><span class="mode-icon" aria-hidden="true">↗</span> Seguimiento temporal</button>
       <button id="module-glossary" class="mode-button" type="button" aria-pressed="false" aria-controls="glossary-workspace"><span class="mode-icon" aria-hidden="true">?</span> Glosario</button>
     </nav>
+
+    <aside class="tracking-note" role="note" aria-label="Compatibilidad con radar Ezeiza" style="margin: 0 0 20px;">
+      <strong>Compatibilidad de esta versión:</strong> Kerauneos-Sentinel está preparado y validado para capturas del <strong>radar Ezeiza (red SINARAME)</strong>. Su funcionamiento con imágenes de otros radares no está validado y puede generar resultados incorrectos.
+    </aside>
 
     <div class="layout" id="detection-workspace">
       <aside class="panel settings-panel" aria-labelledby="settings-heading">
@@ -60,7 +64,7 @@
             <div class="field-header"><label class="field-label" for="threshold-dbz">Umbral de reflectividad</label><output class="numeric-chip" id="threshold-value" for="threshold-dbz">40 dBZ</output></div>
             <input id="threshold-dbz" name="threshold_dbz" type="range" min="-15" max="75" step="5" value="40">
             <div class="range-labels"><span>−15 dBZ</span><span>75 dBZ</span></div>
-            <p class="field-hint warning-hint">Compatible con capturas SINARAME que conserven el diseño y la escala de colores del perfil de referencia.</p>
+            <p class="field-hint warning-hint">En esta versión, la estimación de dBZ se ha validado con capturas del radar Ezeiza-SINARAME.</p>
           </div>
           <div class="form-grid">
             <div class="field-block"><label class="field-label" for="filter-type">Filtro espacial</label><select id="filter-type" name="filter_type"><option value="none">Sin filtro</option><option value="gaussian">Gaussiano</option><option value="median">Mediana</option><option value="average">Promedio</option></select></div>
@@ -111,7 +115,7 @@
           </div>
           <!-- Compatibilidad temporal con tracking.js; el backend detecta la ROI automaticamente. -->
           <input type="checkbox" id="track-enable-roi" hidden>
-          <p class="field-hint">En capturas SINARAME compatibles con el perfil de referencia, procesamos internamente la zona útil y mostramos la imagen completa.</p>
+          <p class="field-hint">Con capturas compatibles del radar Ezeiza, procesamos internamente la zona útil y mostramos la imagen completa.</p>
           <button class="primary-button" type="submit" id="track-button"><span aria-hidden="true">↗</span> Estimar desplazamiento <span class="button-arrow" aria-hidden="true">→</span></button>
           <p id="track-feedback" class="form-feedback" role="status" aria-live="polite">Cargá dos imágenes para comenzar.</p>
           <div class="tracking-note">Este análisis estima desplazamientos <strong>en píxeles entre imágenes</strong>; no supone intervalos temporales fijos ni calcula velocidades en km/h.</div>
