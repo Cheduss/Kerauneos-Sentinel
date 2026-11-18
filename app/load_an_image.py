@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 
-# Formatos admitidos
+#Formatos admitidos
 SUPPORTED_FORMATS = {".png", ".jpg", ".jpeg"}
 
 
