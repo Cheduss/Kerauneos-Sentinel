@@ -15,11 +15,11 @@ from app.motion_visualization import draw_motion_vectors
 import cv2
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.pipeline import analyze_radar, EZEIZA_AUTO_ROI
-from app.radar_profiles import validate_ezeiza_radar
+from app.radar_profiles import EZEIZA_PROFILE, REFERENCE_COLORS
 from app.storm_tracking import estimate_storm_motion
 
 
@@ -94,13 +94,134 @@ def parse_roi(roi: str | None):
     return coordinates
 
 
-@app.get("/")
-def home():
-    return {
-        "project": "Kerauneos-Sentinel",
-        "status": "API funcionando"
-    }
+def _has_sinarame_panel_layout(image: np.ndarray) -> bool:
+    """Reconoce el esquema: corte superior + mapa + cortes laterales.
 
+    No identifica la estacion ni certifica que la reflectividad sea correcta.
+    Sirve para que una diferencia en la paleta no active el seguimiento sobre
+    las secciones verticales ni sobre el corte horizontal de SINARAME.
+    """
+    height, width = image.shape[:2]
+
+    # Esta plantilla se ha verificado en capturas SINARAME casi cuadradas.
+    if min(height, width) < 400 or abs(width / height - 1.0) > 0.035:
+        return False
+
+    # El fondo de la pagina es claro y el sector izquierdo del mapa, oscuro.
+    if np.min(image[0, 0]) < 180:
+        return False
+
+    left_area = image[
+        round(height * 0.20):round(height * 0.85),
+        round(width * 0.010):round(width * 0.028),
+    ]
+    if left_area.size == 0 or np.mean(np.max(left_area, axis=2) < 70) < 0.65:
+        return False
+
+    # Las dos secciones ajenas al mapa presentan colores de reflectividad.
+    top_section = image[
+        round(height * 0.045):round(height * 0.105),
+        round(width * 0.10):round(width * 0.75),
+    ]
+    side_sections = image[
+        round(height * 0.16):round(height * 0.85),
+        round(width * 0.83):round(width * 0.90),
+    ]
+
+    def colored_fraction(region: np.ndarray) -> float:
+        if region.size == 0:
+            return 0.0
+        rgb_range = (
+            region.max(axis=2).astype(np.int16)
+            - region.min(axis=2).astype(np.int16)
+        )
+        return float(np.mean(
+            (rgb_range > 50) & (region.max(axis=2) > 70)
+        ))
+
+    return (
+        colored_fraction(top_section) >= 0.15
+        and colored_fraction(side_sections) >= 0.15
+    )
+
+
+def detect_sinarame_map_roi(image: np.ndarray) -> tuple[int, int, int, int] | None:
+    """Determina la ROI del MAPA, dejando fuera los cortes superior y laterales.
+
+    Usa una plantilla geometrica de SINARAME que funciona tanto para las
+    capturas de Ezeiza como para las de Bernardo de Irigoyen aportadas.
+    Se acepta si coincide la barra de referencia o si se reconoce la estructura
+    visual. Si no se reconoce, no se inventa un recorte.
+    """
+    if (
+        not isinstance(image, np.ndarray)
+        or image.ndim != 3
+        or image.shape[2] != 3
+        or image.dtype != np.uint8
+        or image.size == 0
+    ):
+        return None
+
+    height, width = image.shape[:2]
+    scale_x = width / EZEIZA_PROFILE["width"]
+    scale_y = height / EZEIZA_PROFILE["height"]
+
+    if (
+        min(height, width) < 400
+        or not (0.5 <= scale_x <= 4.0)
+        or abs(scale_x - scale_y) > 0.02 * max(scale_x, scale_y)
+    ):
+        return None
+
+    legend_x = round(EZEIZA_PROFILE["legend_x"] * scale_x)
+    dbz_max = EZEIZA_PROFILE["dbz_max"]
+    dbz_min = EZEIZA_PROFILE["dbz_min"]
+
+    matches_reference_palette = True
+    for dbz, expected_bgr in REFERENCE_COLORS.items():
+        fraction = (dbz_max - dbz) / (dbz_max - dbz_min)
+        legend_y = (
+            EZEIZA_PROFILE["legend_y_top"]
+            + fraction * (
+                EZEIZA_PROFILE["legend_y_bottom"]
+                - EZEIZA_PROFILE["legend_y_top"]
+            )
+        )
+        x = legend_x
+        y = round(legend_y * scale_y)
+
+        if not (0 <= x < width and 0 <= y < height):
+            matches_reference_palette = False
+            break
+
+        observed = image[y, x].astype(np.int16)
+        expected = np.asarray(expected_bgr, dtype=np.int16)
+        if np.max(np.abs(observed - expected)) > 45:
+            matches_reference_palette = False
+            break
+
+    # No caer silenciosamente en seguimiento de la imagen completa por
+    # pequeñas variaciones en el color de la leyenda o compresión JPG.
+    if not matches_reference_palette and not _has_sinarame_panel_layout(image):
+        return None
+
+    x1, y1, x2, y2 = EZEIZA_AUTO_ROI
+    roi = (
+        round(x1 * scale_x),
+        round(y1 * scale_y),
+        round(x2 * scale_x),
+        round(y2 * scale_y),
+    )
+    left, top, right, bottom = roi
+    if not (0 <= left < right <= width and 0 <= top < bottom <= height):
+        return None
+
+    return roi
+
+
+@app.get("/", include_in_schema=False)
+def home():
+    return RedirectResponse(url="/app", status_code=302)
 
 @app.post("/api/analyze")
 async def analyze_image(
@@ -263,7 +384,7 @@ async def track_storms(
     """
     Estima movimiento con Lucas-Kanade.
 
-    Para dos capturas completas reconocidas como Ezeiza-SINARAME,
+    Para dos capturas SINARAME con geometria compatible,
     la ROI se aplica automaticamente y SOLO internamente.
     Devuelve las capturas originales y flechas sobre la imagen completa.
 
@@ -284,18 +405,28 @@ async def track_storms(
         coordinates = parse_roi(roi)
         automatic_roi = False
 
-        # Solo aplicar el recorte automatico si AMBOS radares
-        # tienen el mismo perfil reconocido. No basta con el tamano.
+        # Reconocer la misma plantilla SINARAME incluso si cambio la escala.
+        # Solo recortar si las DOS capturas pasan la verificacion de leyenda.
         if coordinates is None:
-            try:
-                validate_ezeiza_radar(full_first)
-                validate_ezeiza_radar(full_second)
-            except ValueError:
-                # Radar desconocido: procesar la captura completa.
-                pass
-            else:
-                coordinates = EZEIZA_AUTO_ROI
+            roi_first = detect_sinarame_map_roi(full_first)
+            roi_second = detect_sinarame_map_roi(full_second)
+            if roi_first is not None and roi_first == roi_second:
+                coordinates = roi_first
                 automatic_roi = True
+            elif (roi_first is None) != (roi_second is None):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "No se pudo reconocer la misma region del mapa "
+                        "SINARAME en ambas imagenes. "
+                        "No se ejecuta el seguimiento sobre los cortes."
+                    ),
+                )
+            elif roi_first is not None and roi_second is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Los mapas SINARAME no tienen una geometria compatible.",
+                )
 
         # Trabajar con las mismas coordenadas en T1 y T2.
         if coordinates is not None:

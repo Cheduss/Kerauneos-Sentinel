@@ -42,10 +42,10 @@ def upload_image(content, filename="radar.png", data=None):
 
 
 def test_home():
-    response = client.get("/")
+    response = client.get("/", follow_redirects=False)
 
-    assert response.status_code == 200
-    assert response.json()["project"] == "Kerauneos-Sentinel"
+    assert response.status_code == 302
+    assert response.headers["location"] == "/app"
 
 
 def test_analyze_image(radar_png):
