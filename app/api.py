@@ -24,9 +24,10 @@ from app.storm_tracking import estimate_storm_motion
 
 
 """
-GET /	Comprueba que el servidor funciona
-POST /api/analyze	Recibe una imagen y ejecuta mi app
-
+GET /            Redirige a la interfaz principal.
+GET /app         Muestra el frontend.
+POST /api/analyze  Procesa una imagen de radar.
+POST /api/track    Estima el desplazamiento entre dos capturas.
 """
 
 
@@ -36,7 +37,7 @@ app = FastAPI(
     version="0.1.0"
 )
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" # Indicamos dónde están los archivos del frontend para que el FASTAPI pueda mostrarlos 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
@@ -177,7 +178,7 @@ def detect_sinarame_map_roi(image: np.ndarray) -> tuple[int, int, int, int] | No
     dbz_max = EZEIZA_PROFILE["dbz_max"]
     dbz_min = EZEIZA_PROFILE["dbz_min"]
 
-    matches_reference_palette = True
+    matches_reference_palette = True #Comparamos algunos colores de la leyenda con los valores de referencia a ver si tiene formato conocido
     for dbz, expected_bgr in REFERENCE_COLORS.items():
         fraction = (dbz_max - dbz) / (dbz_max - dbz_min)
         legend_y = (
@@ -271,7 +272,7 @@ async def analyze_image(
                 detail="El archivo esta vacio."
             )
 
-        coordinates = parse_roi(roi)
+        coordinates = parse_roi(roi) #coordenadas del recorte, si fueron indicadas. Sino el pi8peline aplica recorte automartico
 
         # Guardar temporalmente la imagen recibida
         with tempfile.NamedTemporaryFile(
@@ -355,7 +356,7 @@ async def read_uploaded_radar(file: UploadFile):
             detail="La imagen esta vacia."
         )
 
-    buffer = np.frombuffer(content, dtype=np.uint8)
+    buffer = np.frombuffer(content, dtype=np.uint8) #Convertimos los bytes recibidos en un arreglo de NumPy y después decodificamos la imagen para trabajar con OpenCV.
 
     image = cv2.imdecode(
         buffer,
@@ -405,8 +406,8 @@ async def track_storms(
         coordinates = parse_roi(roi)
         automatic_roi = False
 
-        # Reconocer la misma plantilla SINARAME incluso si cambio la escala.
-        # Solo recortar si las DOS capturas pasan la verificacion de leyenda.
+        #Reconoce la misma plantilla SINARAME incluso si cambio la escala.
+        #Solo recortar si las DOS capturas pasan la verificacion de leyenda.
         if coordinates is None:
             roi_first = detect_sinarame_map_roi(full_first)
             roi_second = detect_sinarame_map_roi(full_second)
@@ -428,7 +429,7 @@ async def track_storms(
                     detail="Los mapas SINARAME no tienen una geometria compatible.",
                 )
 
-        # Trabajar con las mismas coordenadas en T1 y T2.
+        #Trabaja con las mismas coordenadas en T1 y T2.
         if coordinates is not None:
             try:
                 work_first = crop_radar(full_first, *coordinates)
@@ -456,8 +457,8 @@ async def track_storms(
                     max_corners=max_corners,
                 )
 
-            # Dibujar sobre la ROI, de forma que el recuadro informativo
-            # NO tape el encabezado con fecha/hora de la captura completa.
+            #Dibujar sobre la ROI, de forma que el recuadro informativo
+            #NO tape el encabezado con fecha/hora de la captura completa.
             work_result = draw_motion_vectors(
                 work_second,
                 motion,
@@ -472,11 +473,11 @@ async def track_storms(
         if coordinates is not None:
             x1, y1, x2, y2 = coordinates
 
-            # Volver a insertar la region anotada en el radar completo.
+            #Volvemos a colocar el resultado procesado sobre la captura completa para conservar la leyenda, la fecha y los demas paneles..
             full_result = full_second.copy()
             full_result[y1:y2, x1:x2] = work_result
 
-            # Los vectores del JSON deben referirse a la imagen COMPLETA.
+            #Los vectores del JSON deben referirse a la imagen COMPLETA.
             shifted_vectors = []
             for vector in motion["vectors"]:
                 shifted_vectors.append({
@@ -490,7 +491,7 @@ async def track_storms(
             full_result = work_result
             shifted_vectors = motion["vectors"]
 
-        # Desplazamientos dx/dy no cambian al sumar el origen de la ROI.
+        #Desplazamientos dx/dy no cambian al sumar el origen de la ROI.
         return {
             "tracking_mode": tracking_mode,
             "candidate_points": motion.get("candidate_points"),
