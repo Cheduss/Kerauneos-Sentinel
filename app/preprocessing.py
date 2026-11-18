@@ -2,6 +2,12 @@
 import cv2
 import numpy as np
 
+""""
+HAY QUER TENER EN CUENTA QUE LOS FILTROS SON OPCIONALES. En una imagen de radar con paleta discreta,
+suavizar los colores puede alterar como se ven lso dBz (reflectividad).
+
+"""
+
 
 def apply_filter(
     image: np.ndarray,
