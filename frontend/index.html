@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/styles.css">
   <script defer src="/static/app.js"></script>
   <script defer src="/static/tracking.js"></script>
+  <script defer src="/static/example_images.js"></script>
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -52,6 +53,7 @@
             </label>
             <input id="image-file" name="image" type="file" accept="image/png,image/jpeg" required class="visually-hidden">
             <p class="file-name" id="file-name">Sin archivo seleccionado</p>
+            <button type="button" class="secondary-button" id="load-detection-example" style="display:block;width:100%;margin-top:12px;white-space:normal">◉ Cargar imagen de ejemplo · Ezeiza</button>
           </div>
           <div class="field-block">
             <label class="field-label" for="segmentation-mode">Método de segmentación</label>
@@ -105,6 +107,10 @@
             <label class="field-label" for="track-image2">Radar T2 <span class="required">*</span></label>
             <input class="tracking-file-input" type="file" id="track-image2" name="image2" accept="image/png,image/jpeg" required>
             <p class="field-hint">Segundo instante · misma dimensión y encuadre</p>
+          </div>
+          <div class="field-block" style="margin-top:12px">
+            <button type="button" class="secondary-button" id="load-tracking-examples" style="display:block;width:100%;white-space:normal">↗ Cargar T1 y T2 de ejemplo · Ezeiza</button>
+            <p class="field-hint">Podés usar estos ejemplos o seleccionar tus propios archivos.</p>
           </div>
           <!-- Seguimiento restringido a ecos de precipitación; API conserva sus opciones internas. -->
           <input type="hidden" id="tracking-mode" name="tracking_mode" value="precipitation">
