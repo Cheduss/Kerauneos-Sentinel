@@ -1,3 +1,31 @@
+
+## Información académica
+
+- **Materia:** Procesamiento de Imágenes.
+- **Año y cuatrimestre:** 2026 – 2d Cuatrimestre.
+- **Alumno:** Gastón Ramírez.
+- **Docente:** Juan Ignacio Bonini.
+
+## Motivación del proyecto
+
+La idea de desarrollar Kerauneos-Sentinel surgió de mi interés por la meteorología y de la posibilidad de aplicar los contenidos de Procesamiento de Imágenes a un problema relacionado con esta disciplina.
+
+El objetivo fue crear una herramienta que permitiera identificar núcleos de precipitación en imágenes de radar meteorológico y estimar sus desplazamientos entre dos capturas consecutivas, utilizando técnicas como segmentación por colores, filtros espaciales, operaciones morfológicas, componentes conectados y flujo óptico.
+
+Busqué integrar estos procedimientos en una aplicación web sencilla, que permitiera visualizar cada etapa del procesamiento y descargar los resultados obtenidos.
+
+## Problemáticas encontradas y soluciones implementadas
+
+Durante el desarrollo surgieron distintas dificultades:
+
+- **Identificación de los núcleos:** las imágenes contienen colores que representan diferentes intensidades de reflectividad. Para distinguir las regiones de interés se implementó segmentación en el espacio HSV y una alternativa basada en valores aproximados de dBZ.
+- **Ruido y falsas detecciones:** algunos píxeles aislados y elementos gráficos podían confundirse con precipitación. Para reducir estos problemas se incorporaron filtros espaciales, operaciones morfológicas y un área mínima para los componentes detectados.
+- **Recorte de las imágenes:** las capturas incluyen leyendas y cortes verticales que no forman parte del mapa principal. Se implementó un recorte automático de la región de interés, conservando la imagen completa para mostrar los resultados.
+- **Seguimiento temporal:** el movimiento de los ecos y los cambios en su estructura dificultaron el seguimiento de puntos entre imágenes. Se utilizó el algoritmo de Lucas–Kanade y se incorporaron verificaciones para descartar correspondencias poco confiables.
+- **Interpretación del movimiento:** al no contar con una escala espacial y temporal validada para todas las capturas, se decidió expresar los desplazamientos en píxeles y sus direcciones en grados, evitando calcular velocidades físicas que podrían resultar incorrectas.
+- **Compatibilidad entre radares:** se observaron diferencias en los formatos de las capturas. Por este motivo, la versión de entrega se encuentra validada principalmente con imágenes del radar de Ezeiza de la red SINARAME.
+
+
 # Kerauneos-Sentinel 🌩️
 
 **Detección de núcleos de precipitación y estimación de desplazamientos aparentes en imágenes de radar meteorológico mediante procesamiento digital de imágenes.**
